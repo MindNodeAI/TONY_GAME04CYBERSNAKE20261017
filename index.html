@@ -1,0 +1,1714 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CYBER SNAKE // 霓虹貪食蛇 AI 戰術版</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        cyber: ['Orbitron', 'Noto Sans TC', 'sans-serif'],
+                        sans: ['Noto Sans TC', 'sans-serif'],
+                    },
+                    colors: {
+                        cyber: {
+                            bg: '#070913',
+                            panel: '#0f1428',
+                            neonGreen: '#10b981',
+                            neonCyan: '#06b6d4',
+                            neonPink: '#f43f5e',
+                            neonGold: '#f59e0b',
+                            neonPurple: '#a855f7'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #060811;
+            background-image: 
+                radial-gradient(circle at 15% 20%, rgba(16, 185, 129, 0.08) 0%, transparent 40%),
+                radial-gradient(circle at 85% 80%, rgba(6, 182, 212, 0.08) 0%, transparent 40%);
+            color: #e2e8f0;
+            overflow-x: hidden;
+            touch-action: manipulation;
+        }
+
+        /* Neon Glow Utilities */
+        .neon-border-green {
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.35), inset 0 0 12px rgba(16, 185, 129, 0.15);
+            border: 1px solid rgba(16, 185, 129, 0.6);
+        }
+        .neon-border-cyan {
+            box-shadow: 0 0 15px rgba(6, 182, 212, 0.35), inset 0 0 12px rgba(6, 182, 212, 0.15);
+            border: 1px solid rgba(6, 182, 212, 0.6);
+        }
+        .neon-border-purple {
+            box-shadow: 0 0 18px rgba(168, 85, 247, 0.4), inset 0 0 12px rgba(168, 85, 247, 0.15);
+            border: 1px solid rgba(168, 85, 247, 0.65);
+        }
+        .neon-text-green {
+            text-shadow: 0 0 10px rgba(16, 185, 129, 0.8), 0 0 20px rgba(16, 185, 129, 0.4);
+        }
+        .neon-text-cyan {
+            text-shadow: 0 0 10px rgba(6, 182, 212, 0.8), 0 0 20px rgba(6, 182, 212, 0.4);
+        }
+        .neon-text-gold {
+            text-shadow: 0 0 10px rgba(245, 158, 11, 0.8), 0 0 20px rgba(245, 158, 11, 0.4);
+        }
+
+        /* Game Canvas Styling */
+        #gameCanvas {
+            background-color: #080c17;
+            box-shadow: 0 0 25px rgba(16, 185, 129, 0.25), inset 0 0 30px rgba(0, 0, 0, 0.8);
+            border: 2px solid rgba(16, 185, 129, 0.5);
+            display: block;
+            width: 100%;
+            height: auto;
+            aspect-ratio: 1 / 1;
+            touch-action: none;
+        }
+
+        /* Virtual D-Pad Button Active State */
+        .dpad-btn {
+            user-select: none;
+            -webkit-user-select: none;
+            transition: all 0.1s ease;
+        }
+        .dpad-btn:active {
+            transform: scale(0.92);
+            background-color: rgba(16, 185, 129, 0.35);
+            box-shadow: 0 0 15px rgba(16, 185, 129, 0.7);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #070913;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1e293b;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #10b981;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between font-sans selection:bg-emerald-500 selection:text-black">
+
+    <!-- Top Navigation & Header -->
+    <header class="w-full border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-md sticky top-0 z-30">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+            <!-- Brand Title -->
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/50 flex items-center justify-center shadow-[0_0_15px_rgba(16,185,129,0.4)]">
+                    <i class="ph-fill ph-game-controller text-2xl text-emerald-400"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h1 class="font-cyber text-lg sm:text-xl font-black tracking-wider text-white neon-text-green">
+                            CYBER<span class="text-emerald-400">SNAKE</span>
+                        </h1>
+                        <span class="text-[10px] font-cyber px-2 py-0.5 rounded-full bg-cyan-500/20 border border-cyan-400/40 text-cyan-300">
+                            NEON EDITION
+                        </span>
+                    </div>
+                    <p class="text-xs text-slate-400 hidden sm:block">賽博霓虹貪食蛇 // 支援 AI 動態關卡與戰術分析</p>
+                </div>
+            </div>
+
+            <!-- Action Controls -->
+            <div class="flex items-center gap-2 sm:gap-3">
+                <!-- AI Coach & Level Generator Button -->
+                <button id="openAiModalBtn" class="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-gradient-to-r from-purple-600/30 to-cyan-600/30 hover:from-purple-600/50 hover:to-cyan-600/50 text-purple-200 border border-purple-400/50 shadow-[0_0_15px_rgba(168,85,247,0.3)] transition-all text-xs sm:text-sm font-medium">
+                    <i class="ph-fill ph-sparkle text-purple-400 text-base animate-pulse"></i>
+                    <span>AI 戰術教練與動態關卡</span>
+                    <span id="aiStatusDot" class="w-2 h-2 rounded-full bg-slate-500" title="尚未設定 API Key"></span>
+                </button>
+
+                <!-- Sound Mute/Unmute Button -->
+                <button id="soundToggleBtn" class="p-2.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-emerald-400 border border-slate-700/80 transition-all" title="切換音效 (Mute/Unmute)">
+                    <i id="soundIcon" class="ph-fill ph-speaker-high text-lg"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Game Content Area -->
+    <main class="max-w-7xl w-full mx-auto px-4 py-6 flex-grow flex flex-col lg:flex-row gap-6 items-start justify-center">
+
+        <!-- Left Column: Scoreboard & Game Mode Settings -->
+        <section class="w-full lg:w-80 flex flex-col gap-4 order-2 lg:order-1">
+            <!-- Score Cards Grid -->
+            <div class="grid grid-cols-2 gap-3">
+                <!-- Current Score -->
+                <div class="bg-slate-900/80 border border-emerald-500/30 rounded-2xl p-3.5 shadow-lg relative overflow-hidden">
+                    <div class="text-xs text-slate-400 flex items-center justify-between">
+                        <span>目前分數 SCORE</span>
+                        <i class="ph ph-trophy text-emerald-400"></i>
+                    </div>
+                    <div id="scoreDisplay" class="font-cyber text-2xl sm:text-3xl font-black text-emerald-400 mt-1 neon-text-green">
+                        0
+                    </div>
+                    <div id="multiplierBadge" class="hidden mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-500/20 border border-amber-400/50 text-amber-300 text-[11px] font-bold animate-pulse">
+                        <i class="ph-fill ph-star"></i> 2X 加倍中 (<span id="multiplierTimer">8</span>s)
+                    </div>
+                </div>
+
+                <!-- High Score -->
+                <div class="bg-slate-900/80 border border-cyan-500/30 rounded-2xl p-3.5 shadow-lg">
+                    <div class="text-xs text-slate-400 flex items-center justify-between">
+                        <span>最高紀錄 BEST</span>
+                        <i class="ph ph-crown text-cyan-400"></i>
+                    </div>
+                    <div id="highScoreDisplay" class="font-cyber text-2xl sm:text-3xl font-black text-cyan-400 mt-1 neon-text-cyan">
+                        0
+                    </div>
+                    <div class="text-[11px] text-slate-500 mt-1">自動儲存於本機</div>
+                </div>
+
+                <!-- Speed / Combo Level -->
+                <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-3.5">
+                    <div class="text-xs text-slate-400 flex items-center justify-between">
+                        <span>速度與連擊 SPEED</span>
+                        <i class="ph ph-lightning text-amber-400"></i>
+                    </div>
+                    <div class="flex items-baseline gap-2 mt-1">
+                        <span id="speedLevelDisplay" class="font-cyber text-xl font-bold text-white">LV.1</span>
+                        <span id="lengthDisplay" class="text-xs text-emerald-400 font-medium">長度: 3</span>
+                    </div>
+                </div>
+
+                <!-- Active Mode Summary -->
+                <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-3.5">
+                    <div class="text-xs text-slate-400 flex items-center justify-between">
+                        <span>邊界模式 WALL</span>
+                        <i class="ph ph-arrows-out-cardinal text-purple-400"></i>
+                    </div>
+                    <div id="modeStatusText" class="text-sm font-bold text-purple-300 mt-1.5 truncate">
+                        經典撞牆模式
+                    </div>
+                </div>
+            </div>
+
+            <!-- Game Control & Difficulty Configuration Panel -->
+            <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 flex flex-col gap-4 shadow-xl">
+                <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
+                    <h2 class="text-sm font-bold text-white flex items-center gap-2">
+                        <i class="ph-fill ph-sliders text-emerald-400"></i>
+                        戰術參數設定
+                    </h2>
+                    <span id="activeMapBadge" class="text-[11px] px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                        地圖：無障礙經典
+                    </span>
+                </div>
+
+                <!-- Difficulty Selector -->
+                <div>
+                    <label class="text-xs text-slate-400 block mb-2">1. 選擇遊戲難度 (Difficulty)</label>
+                    <div class="grid grid-cols-3 gap-2" id="difficultyGroup">
+                        <button data-diff="easy" class="diff-btn py-2 px-2 rounded-xl text-xs font-bold border border-slate-700 bg-slate-800/60 text-slate-300 hover:border-emerald-500/50 transition-all">
+                            慢速休閒
+                        </button>
+                        <button data-diff="normal" class="diff-btn py-2 px-2 rounded-xl text-xs font-bold border border-emerald-500 bg-emerald-500/20 text-emerald-300 shadow-[0_0_10px_rgba(16,185,129,0.3)] transition-all">
+                            標準競技
+                        </button>
+                        <button data-diff="hard" class="diff-btn py-2 px-2 rounded-xl text-xs font-bold border border-slate-700 bg-slate-800/60 text-slate-300 hover:border-emerald-500/50 transition-all">
+                            極速挑戰
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Portal Mode Toggle -->
+                <div class="flex items-center justify-between bg-slate-950/60 p-3 rounded-xl border border-slate-800/80">
+                    <div>
+                        <div class="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                            <i class="ph-fill ph-spiral text-cyan-400"></i>
+                            穿牆傳送模式 (Portal Mode)
+                        </div>
+                        <p class="text-[11px] text-slate-400 mt-0.5">開啟後穿越邊界將從對側出現</p>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="portalToggle" class="sr-only peer">
+                        <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-cyan-500"></div>
+                    </label>
+                </div>
+
+                <!-- Preset Obstacle Map Selector -->
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="text-xs text-slate-400">2. 選擇障礙物地形 (或使用 AI 生成)</label>
+                    </div>
+                    <div class="grid grid-cols-3 gap-2" id="presetMapGroup">
+                        <button data-map="classic" class="map-btn py-2 px-2 rounded-xl text-xs font-medium border border-cyan-500 bg-cyan-500/20 text-cyan-300 transition-all">
+                            無障礙經典
+                        </button>
+                        <button data-map="fortress" class="map-btn py-2 px-2 rounded-xl text-xs font-medium border border-slate-700 bg-slate-800/60 text-slate-300 hover:border-cyan-500/40 transition-all">
+                            四角堡壘
+                        </button>
+                        <button data-map="cross" class="map-btn py-2 px-2 rounded-xl text-xs font-medium border border-slate-700 bg-slate-800/60 text-slate-300 hover:border-cyan-500/40 transition-all">
+                            中央十字
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Special Food Legend -->
+            <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 shadow-xl">
+                <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                    <i class="ph-fill ph-flask text-emerald-400"></i>
+                    霓虹能量補給圖鑑 (Special Items)
+                </h3>
+                <div class="space-y-2.5 text-xs">
+                    <div class="flex items-center justify-between p-2 rounded-lg bg-slate-950/50 border border-slate-800/60">
+                        <div class="flex items-center gap-2.5">
+                            <span class="w-3.5 h-3.5 rounded-full bg-rose-500 shadow-[0_0_10px_#f43f5e] inline-block"></span>
+                            <span class="font-medium text-slate-200">霓虹紅蘋 (Normal)</span>
+                        </div>
+                        <span class="text-rose-400 font-cyber">+10 PT / 長度+1</span>
+                    </div>
+                    <div class="flex items-center justify-between p-2 rounded-lg bg-slate-950/50 border border-slate-800/60">
+                        <div class="flex items-center gap-2.5">
+                            <span class="w-3.5 h-3.5 rounded-full bg-amber-400 shadow-[0_0_10px_#f59e0b] inline-block"></span>
+                            <span class="font-medium text-slate-200">黃金星核 (限時出現)</span>
+                        </div>
+                        <span class="text-amber-400 font-cyber">+30 PT / 8秒 2X倍分</span>
+                    </div>
+                    <div class="flex items-center justify-between p-2 rounded-lg bg-slate-950/50 border border-slate-800/60">
+                        <div class="flex items-center gap-2.5">
+                            <span class="w-3.5 h-3.5 rounded-full bg-cyan-400 shadow-[0_0_10px_#06b6d4] inline-block"></span>
+                            <span class="font-medium text-slate-200">極速藥水 (Speed)</span>
+                        </div>
+                        <span class="text-cyan-400 font-cyber">+15 PT / 短暫氮氣加速</span>
+                    </div>
+                    <div class="flex items-center justify-between p-2 rounded-lg bg-slate-950/50 border border-slate-800/60">
+                        <div class="flex items-center gap-2.5">
+                            <span class="w-3.5 h-3.5 rounded-full bg-purple-500 shadow-[0_0_10px_#a855f7] inline-block"></span>
+                            <span class="font-medium text-slate-200">縮骨紫莓 (Shrink)</span>
+                        </div>
+                        <span class="text-purple-400 font-cyber">+20 PT / 縮短蛇身2格</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Center/Right Column: Interactive Game Canvas & Controls -->
+        <section class="w-full max-w-[560px] flex flex-col items-center order-1 lg:order-2">
+            
+            <!-- Active Bonus / Golden Star Countdown Bar -->
+            <div class="w-full mb-2.5 flex flex-col gap-1.5 min-h-[28px]">
+                <!-- Golden Star Spawn Timer Bar -->
+                <div id="starSpawnBarWrapper" class="hidden w-full bg-slate-900/90 border border-amber-500/40 rounded-lg px-3 py-1.5 flex items-center gap-3">
+                    <span class="text-xs font-bold text-amber-300 flex items-center gap-1 shrink-0">
+                        <i class="ph-fill ph-shooting-star animate-spin"></i> 黃金星核倒數
+                    </span>
+                    <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                        <div id="starCountdownBar" class="bg-gradient-to-r from-amber-500 to-yellow-300 h-full w-full transition-all duration-100"></div>
+                    </div>
+                </div>
+
+                <!-- Speed Potion Active Indicator -->
+                <div id="speedBoostBarWrapper" class="hidden w-full bg-slate-900/90 border border-cyan-500/40 rounded-lg px-3 py-1 flex items-center justify-between text-xs text-cyan-300">
+                    <span class="flex items-center gap-1 font-bold"><i class="ph-fill ph-lightning"></i> 氮氣加速狀態啟動中！</span>
+                    <span id="speedBoostTimer" class="font-cyber">5.0s</span>
+                </div>
+            </div>
+
+            <!-- Canvas Container with Overlays -->
+            <div class="relative w-full rounded-2xl overflow-hidden p-1 bg-gradient-to-b from-emerald-500/20 via-slate-900 to-cyan-500/20 shadow-2xl">
+                <canvas id="gameCanvas" width="600" height="600" class="rounded-xl"></canvas>
+
+                <!-- Start / Pause / Game Over Overlay -->
+                <div id="canvasOverlay" class="absolute inset-0 bg-slate-950/85 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-20 transition-opacity duration-300">
+                    
+                    <div id="overlayIconBox" class="w-16 h-16 rounded-2xl bg-emerald-500/15 border border-emerald-400/50 flex items-center justify-center mb-4 shadow-[0_0_25px_rgba(16,185,129,0.5)]">
+                        <i id="overlayIcon" class="ph-fill ph-play text-4xl text-emerald-400"></i>
+                    </div>
+
+                    <h2 id="overlayTitle" class="font-cyber text-2xl sm:text-3xl font-black text-white tracking-wider neon-text-green mb-2">
+                        SYSTEM READY
+                    </h2>
+                    <p id="overlaySubtitle" class="text-xs sm:text-sm text-slate-300 max-w-md mb-5 leading-relaxed">
+                        使用鍵盤 <kbd class="px-1.5 py-0.5 bg-slate-800 border border-slate-600 rounded text-emerald-300">WASD</kbd> 或 <kbd class="px-1.5 py-0.5 bg-slate-800 border border-slate-600 rounded text-emerald-300">方向鍵</kbd> 控制移動，<kbd class="px-1.5 py-0.5 bg-slate-800 border border-slate-600 rounded text-cyan-300">空白鍵</kbd> 暫停。行動裝置可使用下方虛擬方向鍵或滑動螢幕。
+                    </p>
+
+                    <!-- Game Over Stats Summary (Hidden initially) -->
+                    <div id="gameOverStatsBox" class="hidden w-full max-w-md bg-slate-900/90 border border-slate-800 rounded-xl p-3.5 mb-4 grid grid-cols-3 gap-2 text-center">
+                        <div>
+                            <div class="text-[11px] text-slate-400">本局得分</div>
+                            <div id="finalScoreStat" class="font-cyber text-lg font-bold text-emerald-400">0</div>
+                        </div>
+                        <div>
+                            <div class="text-[11px] text-slate-400">存活時間</div>
+                            <div id="finalTimeStat" class="font-cyber text-lg font-bold text-cyan-400">0s</div>
+                        </div>
+                        <div>
+                            <div class="text-[11px] text-slate-400">吞噬能量</div>
+                            <div id="finalFoodStat" class="font-cyber text-lg font-bold text-amber-400">0</div>
+                        </div>
+                    </div>
+
+                    <!-- Post-Game AI Review Box (Shown on Game Over) -->
+                    <div id="aiReviewBox" class="hidden w-full max-w-md bg-purple-950/30 border border-purple-500/40 rounded-xl p-3.5 mb-5 text-left">
+                        <div class="flex items-center justify-between mb-1.5">
+                            <span class="text-xs font-bold text-purple-300 flex items-center gap-1.5">
+                                <i class="ph-fill ph-robot text-purple-400 text-base"></i>
+                                AI 戰術教練賽後講評
+                            </span>
+                            <button id="requestAiReviewBtn" class="text-[11px] px-2.5 py-1 rounded-lg bg-purple-600/40 hover:bg-purple-600/70 text-white border border-purple-400/50 transition-all flex items-center gap-1">
+                                <i class="ph-fill ph-sparkle"></i> 深度戰術分析
+                            </button>
+                        </div>
+                        <p id="aiReviewText" class="text-xs text-slate-200 leading-relaxed">
+                            正在分析您的走位數據...
+                        </p>
+                    </div>
+
+                    <!-- Primary Start / Resume Button -->
+                    <div class="flex flex-wrap items-center justify-center gap-3">
+                        <button id="mainActionBtn" class="px-7 py-3 rounded-xl font-cyber font-bold text-sm sm:text-base bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-[0_0_20px_rgba(16,185,129,0.6)] transition-all transform hover:scale-105 active:scale-95 flex items-center gap-2">
+                            <i class="ph-fill ph-play-circle text-xl"></i>
+                            <span id="mainActionBtnText">啟動引擎 START</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Bar Below Canvas (Desktop & Mobile Quick Controls) -->
+            <div class="w-full flex items-center justify-between gap-3 mt-3">
+                <button id="pauseBtn" class="flex-1 py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700 text-slate-200 text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all">
+                    <i class="ph-fill ph-pause"></i>
+                    <span>暫停 / 繼續 (Space)</span>
+                </button>
+                <button id="restartBtn" class="flex-1 py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-rose-950/60 border border-slate-700 hover:border-rose-500/50 text-slate-200 hover:text-rose-300 text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all">
+                    <i class="ph-bold ph-arrow-counter-clockwise"></i>
+                    <span>重新開始局數</span>
+                </button>
+            </div>
+
+            <!-- Virtual D-Pad for Mobile / Tablet Touch Controls -->
+            <div class="w-full mt-5 sm:mt-4 flex flex-col items-center">
+                <div class="text-[11px] text-slate-400 mb-2 flex items-center gap-1.5">
+                    <i class="ph ph-hand-tap text-emerald-400"></i>
+                    <span>觸控方向控制器 (支援畫布滑動或點擊下方按鍵)</span>
+                </div>
+                <div class="grid grid-cols-3 gap-2.5 w-48 sm:w-52">
+                    <div></div>
+                    <button data-dir="UP" class="dpad-btn h-14 rounded-2xl bg-slate-900/90 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shadow-lg">
+                        <i class="ph-bold ph-caret-up text-2xl"></i>
+                    </button>
+                    <div></div>
+                    <button data-dir="LEFT" class="dpad-btn h-14 rounded-2xl bg-slate-900/90 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shadow-lg">
+                        <i class="ph-bold ph-caret-left text-2xl"></i>
+                    </button>
+                    <button data-dir="DOWN" class="dpad-btn h-14 rounded-2xl bg-slate-900/90 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shadow-lg">
+                        <i class="ph-bold ph-caret-down text-2xl"></i>
+                    </button>
+                    <button data-dir="RIGHT" class="dpad-btn h-14 rounded-2xl bg-slate-900/90 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shadow-lg">
+                        <i class="ph-bold ph-caret-right text-2xl"></i>
+                    </button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- AI Coach & Dynamic Obstacle Level Generator Modal -->
+    <div id="aiModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 hidden items-center justify-center p-4">
+        <div class="bg-slate-900 border border-purple-500/50 rounded-2xl max-w-lg w-full p-5 sm:p-6 shadow-[0_0_40px_rgba(168,85,247,0.25)] flex flex-col gap-5 max-h-[90vh] overflow-y-auto">
+            
+            <!-- Modal Header -->
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-9 h-9 rounded-xl bg-purple-500/20 border border-purple-400/50 flex items-center justify-center text-purple-300">
+                        <i class="ph-fill ph-sparkle text-xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-base sm:text-lg font-bold text-white">AI 戰術教練與動態關卡核心</h3>
+                        <p class="text-xs text-slate-400">Powered by Google Gemini (選填設定，離線亦可暢玩)</p>
+                    </div>
+                </div>
+                <button id="closeAiModalBtn" class="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800">
+                    <i class="ph ph-x text-xl"></i>
+                </button>
+            </div>
+
+            <!-- Section 1: API Key Configuration -->
+            <div class="bg-slate-950/70 border border-slate-800 rounded-xl p-4">
+                <label class="text-xs font-bold text-purple-300 flex items-center justify-between mb-2">
+                    <span>1. Google Gemini API Key 設定 (僅儲存於您的瀏覽器 localStorage)</span>
+                    <span id="keySavedBadge" class="hidden text-[11px] text-emerald-400 font-normal">✓ 已綁定金鑰</span>
+                </label>
+                <div class="flex gap-2">
+                    <input type="password" id="geminiApiKeyInput" placeholder="輸入 AIzaSy... 開頭的 Gemini API Key" class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-purple-400">
+                    <button id="saveApiKeyBtn" class="px-3.5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold transition-all shrink-0">
+                        儲存金鑰
+                    </button>
+                    <button id="clearApiKeyBtn" class="px-2.5 py-2 rounded-xl bg-slate-800 hover:bg-rose-950 text-slate-300 hover:text-rose-300 text-xs transition-all shrink-0" title="清除金鑰">
+                        清除
+                    </button>
+                </div>
+                <p class="text-[11px] text-slate-400 mt-2 leading-relaxed">
+                    系統將優先呼叫 <code class="text-purple-300">gemini-3.8-flash</code> 模型並自動備援至 <code class="text-cyan-300">gemini-3.5-flash</code>。若未填寫 API Key，您仍可使用內建 3 款經典地形與智慧本地講評！
+                </p>
+            </div>
+
+            <!-- Section 2: AI Dynamic Theme Level Generator -->
+            <div class="bg-slate-950/70 border border-slate-800 rounded-xl p-4 flex flex-col gap-3">
+                <div>
+                    <h4 class="text-xs font-bold text-cyan-300 flex items-center gap-1.5">
+                        <i class="ph-fill ph-cube-transparent"></i>
+                        2. AI 動態主題關卡產生器 (AI Custom Obstacle Map)
+                    </h4>
+                    <p class="text-[11px] text-slate-400 mt-0.5">
+                        輸入任何戰術主題名稱，AI 將即時計算並於 24x24 網格上部署專屬霓虹障礙物陣列！
+                    </p>
+                </div>
+
+                <!-- Quick Theme Tags -->
+                <div class="flex flex-wrap gap-1.5">
+                    <button type="button" class="theme-chip text-[11px] px-2.5 py-1 rounded-full bg-slate-800 hover:bg-purple-900/50 text-slate-300 border border-slate-700">迷宮陣</button>
+                    <button type="button" class="theme-chip text-[11px] px-2.5 py-1 rounded-full bg-slate-800 hover:bg-purple-900/50 text-slate-300 border border-slate-700">雙子星</button>
+                    <button type="button" class="theme-chip text-[11px] px-2.5 py-1 rounded-full bg-slate-800 hover:bg-purple-900/50 text-slate-300 border border-slate-700">X型封鎖</button>
+                    <button type="button" class="theme-chip text-[11px] px-2.5 py-1 rounded-full bg-slate-800 hover:bg-purple-900/50 text-slate-300 border border-slate-700">環狀競技場</button>
+                    <button type="button" class="theme-chip text-[11px] px-2.5 py-1 rounded-full bg-slate-800 hover:bg-purple-900/50 text-slate-300 border border-slate-700">隕石星帶</button>
+                </div>
+
+                <div class="flex gap-2">
+                    <input type="text" id="aiMapThemeInput" placeholder="例如：迷宮陣、雙子星、X型封鎖..." class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-cyan-400">
+                    <button id="generateAiMapBtn" class="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-cyan-600 hover:from-purple-500 hover:to-cyan-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-lg transition-all shrink-0">
+                        <i class="ph-fill ph-magic-wand"></i>
+                        <span id="generateAiMapBtnText">生成關卡</span>
+                    </button>
+                </div>
+
+                <div id="aiMapStatusMsg" class="hidden text-xs p-2.5 rounded-lg bg-slate-900 border border-slate-700 text-slate-300"></div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="flex justify-end">
+                <button id="doneAiModalBtn" class="px-5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold transition-all">
+                    返回遊戲
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Toast Notification Box (No alert/confirm) -->
+    <div id="toastBox" class="fixed bottom-16 right-4 z-50 pointer-events-none transform translate-y-8 opacity-0 transition-all duration-300">
+        <div class="bg-slate-900/95 border border-emerald-500/60 text-white px-4 py-3 rounded-xl shadow-[0_0_20px_rgba(16,185,129,0.4)] flex items-center gap-2.5 text-xs sm:text-sm">
+            <i id="toastIcon" class="ph-fill ph-check-circle text-emerald-400 text-lg"></i>
+            <span id="toastMessage">系統訊息</span>
+        </div>
+    </div>
+
+    <!-- Footer Branding -->
+    <footer class="w-full border-t border-slate-800/80 bg-slate-950/90 py-4 px-4 text-center mt-auto">
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-3 text-xs text-slate-400">
+            <p class="font-bold text-slate-200 tracking-wide">
+                @2020 TonyStudio 由TONY 楊文澤 老師設計創作
+            </p>
+            <span class="hidden sm:inline text-slate-600">|</span>
+            <p class="text-slate-400 font-cyber text-[11px]">
+                Designed & Created by Wen-Tse Yang (Tony Studio)
+            </p>
+        </div>
+    </footer>
+
+    <!-- Complete Game Engine, Audio Synthesizer & Gemini AI Integration Script -->
+    <script>
+        /**************************************************************
+         * 1. WEB AUDIO API RETRO SYNTHESIZER (無須外部音檔)
+         **************************************************************/
+        class CyberSoundEngine {
+            constructor() {
+                this.ctx = null;
+                this.muted = false;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    if (AudioCtx) {
+                        this.ctx = new AudioCtx();
+                    }
+                }
+                if (this.ctx && this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            toggleMute() {
+                this.muted = !this.muted;
+                return this.muted;
+            }
+
+            playTone(freq, type, duration, vol = 0.12, slideFreq = null) {
+                if (this.muted) return;
+                try {
+                    this.init();
+                    if (!this.ctx) return;
+
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = type;
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                    if (slideFreq) {
+                        osc.frequency.exponentialRampToValueAtTime(slideFreq, this.ctx.currentTime + duration);
+                    }
+
+                    gain.gain.setValueAtTime(vol, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + duration);
+                } catch (e) {
+                    // Ignore audio context restrictions
+                }
+            }
+
+            playEatNormal() {
+                this.playTone(520, 'sine', 0.11, 0.15, 880);
+            }
+
+            playEatBonus() {
+                this.playTone(587.33, 'triangle', 0.1, 0.18, 880);
+                setTimeout(() => this.playTone(880, 'triangle', 0.18, 0.18, 1174.66), 90);
+            }
+
+            playLevelUp() {
+                const notes = [440, 554.37, 659.25, 880];
+                notes.forEach((n, idx) => {
+                    setTimeout(() => this.playTone(n, 'square', 0.1, 0.1), idx * 65);
+                });
+            }
+
+            playGameOver() {
+                this.playTone(300, 'sawtooth', 0.25, 0.18, 140);
+                setTimeout(() => this.playTone(140, 'sawtooth', 0.4, 0.18, 65), 220);
+            }
+        }
+
+        const sound = new CyberSoundEngine();
+
+        /**************************************************************
+         * 2. GAME CONFIGURATION & STATE
+         **************************************************************/
+        const GRID_SIZE = 24; // 24x24 Grid
+        const CANVAS_SIZE = 600;
+        const CELL_SIZE = CANVAS_SIZE / GRID_SIZE; // 25px per cell
+
+        const DIFFICULTY_SPEEDS = {
+            easy: { baseInterval: 155, label: '慢速休閒' },
+            normal: { baseInterval: 115, label: '標準競技' },
+            hard: { baseInterval: 78, label: '極速挑戰' }
+        };
+
+        // Built-in Offline Obstacle Maps
+        const PRESET_MAPS = {
+            classic: {
+                name: '無障礙經典',
+                obstacles: []
+            },
+            fortress: {
+                name: '四角堡壘',
+                obstacles: [
+                    // Top-Left corner L
+                    {x: 4, y: 4}, {x: 5, y: 4}, {x: 6, y: 4}, {x: 4, y: 5}, {x: 4, y: 6},
+                    // Top-Right corner L
+                    {x: 19, y: 4}, {x: 18, y: 4}, {x: 17, y: 4}, {x: 19, y: 5}, {x: 19, y: 6},
+                    // Bottom-Left corner L
+                    {x: 4, y: 19}, {x: 5, y: 19}, {x: 6, y: 19}, {x: 4, y: 18}, {x: 4, y: 17},
+                    // Bottom-Right corner L
+                    {x: 19, y: 19}, {x: 18, y: 19}, {x: 17, y: 19}, {x: 19, y: 18}, {x: 19, y: 17}
+                ]
+            },
+            cross: {
+                name: '中央十字',
+                obstacles: [
+                    // Horizontal center bar (leaving safe center gap for snake spawn at y=14)
+                    {x: 8, y: 10}, {x: 9, y: 10}, {x: 10, y: 10}, {x: 11, y: 10}, {x: 12, y: 10}, {x: 13, y: 10}, {x: 14, y: 10}, {x: 15, y: 10},
+                    // Vertical bars
+                    {x: 11, y: 5}, {x: 12, y: 5}, {x: 11, y: 6}, {x: 12, y: 6}, {x: 11, y: 7}, {x: 12, y: 7},
+                    {x: 11, y: 17}, {x: 12, y: 17}, {x: 11, y: 18}, {x: 12, y: 18}
+                ]
+            }
+        };
+
+        const state = {
+            status: 'IDLE', // IDLE, RUNNING, PAUSED, GAMEOVER
+            difficulty: 'normal',
+            portalMode: false,
+            currentMapKey: 'classic',
+            currentMapName: '無障礙經典',
+            obstacles: [],
+
+            snake: [],
+            direction: { x: 1, y: 0 },
+            inputQueue: [],
+
+            score: 0,
+            highScore: parseInt(localStorage.getItem('cyber_snake_highscore') || '0', 10),
+            foodEatenCount: 0,
+            startTime: 0,
+            elapsedSeconds: 0,
+
+            // Food items
+            normalFood: { x: 15, y: 15 },
+            specialFood: null, // { x, y, type: 'STAR'|'SPEED'|'SHRINK', spawnTime, duration }
+
+            // Active Buffs
+            scoreMultiplier: 1,
+            multiplierEndTime: 0,
+            speedBoostActive: false,
+            speedBoostEndTime: 0,
+
+            // Visual Particles
+            particles: [],
+            lastMoveTimestamp: 0,
+            pulseTick: 0
+        };
+
+        /**************************************************************
+         * 3. DOM ELEMENTS & INITIALIZATION
+         **************************************************************/
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const scoreDisplay = document.getElementById('scoreDisplay');
+        const highScoreDisplay = document.getElementById('highScoreDisplay');
+        const speedLevelDisplay = document.getElementById('speedLevelDisplay');
+        const lengthDisplay = document.getElementById('lengthDisplay');
+        const modeStatusText = document.getElementById('modeStatusText');
+        const activeMapBadge = document.getElementById('activeMapBadge');
+
+        const multiplierBadge = document.getElementById('multiplierBadge');
+        const multiplierTimer = document.getElementById('multiplierTimer');
+        const starSpawnBarWrapper = document.getElementById('starSpawnBarWrapper');
+        const starCountdownBar = document.getElementById('starCountdownBar');
+        const speedBoostBarWrapper = document.getElementById('speedBoostBarWrapper');
+        const speedBoostTimer = document.getElementById('speedBoostTimer');
+
+        const canvasOverlay = document.getElementById('canvasOverlay');
+        const overlayTitle = document.getElementById('overlayTitle');
+        const overlaySubtitle = document.getElementById('overlaySubtitle');
+        const overlayIcon = document.getElementById('overlayIcon');
+        const mainActionBtn = document.getElementById('mainActionBtn');
+        const mainActionBtnText = document.getElementById('mainActionBtnText');
+        const gameOverStatsBox = document.getElementById('gameOverStatsBox');
+        const finalScoreStat = document.getElementById('finalScoreStat');
+        const finalTimeStat = document.getElementById('finalTimeStat');
+        const finalFoodStat = document.getElementById('finalFoodStat');
+        const aiReviewBox = document.getElementById('aiReviewBox');
+        const aiReviewText = document.getElementById('aiReviewText');
+        const requestAiReviewBtn = document.getElementById('requestAiReviewBtn');
+
+        // Toast Helper
+        let toastTimeout = null;
+        function showToast(msg, iconClass = 'ph-check-circle text-emerald-400') {
+            const toastBox = document.getElementById('toastBox');
+            const toastMessage = document.getElementById('toastMessage');
+            const toastIcon = document.getElementById('toastIcon');
+
+            toastMessage.textContent = msg;
+            toastIcon.className = `ph-fill ${iconClass} text-lg`;
+            toastBox.classList.remove('translate-y-8', 'opacity-0');
+
+            if (toastTimeout) clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => {
+                toastBox.classList.add('translate-y-8', 'opacity-0');
+            }, 3200);
+        }
+
+        /**************************************************************
+         * 4. CORE SNAKE LOGIC & SPECIAL FOOD SYSTEM
+         **************************************************************/
+        function initGameSession() {
+            // Place snake in a guaranteed clear horizontal line around y = 14
+            state.snake = [
+                { x: 10, y: 14 },
+                { x: 9, y: 14 },
+                { x: 8, y: 14 }
+            ];
+            state.direction = { x: 1, y: 0 };
+            state.inputQueue = [];
+            state.score = 0;
+            state.foodEatenCount = 0;
+            state.startTime = performance.now();
+            state.elapsedSeconds = 0;
+
+            state.scoreMultiplier = 1;
+            state.multiplierEndTime = 0;
+            state.speedBoostActive = false;
+            state.speedBoostEndTime = 0;
+            state.specialFood = null;
+            state.particles = [];
+
+            // Ensure starting cells are never blocked by custom obstacles
+            state.obstacles = state.obstacles.filter(obs => {
+                const isStartArea = (obs.y === 14 && obs.x >= 7 && obs.x <= 13);
+                return !isStartArea;
+            });
+
+            spawnNormalFood();
+            updateHUD();
+        }
+
+        function isCellOccupied(x, y) {
+            if (state.snake.some(seg => seg.x === x && seg.y === y)) return true;
+            if (state.obstacles.some(obs => obs.x === x && obs.y === y)) return true;
+            if (state.normalFood && state.normalFood.x === x && state.normalFood.y === y) return true;
+            if (state.specialFood && state.specialFood.x === x && state.specialFood.y === y) return true;
+            return false;
+        }
+
+        function getRandomFreeCell() {
+            const freeCells = [];
+            for (let x = 0; x < GRID_SIZE; x++) {
+                for (let y = 0; y < GRID_SIZE; y++) {
+                    if (!isCellOccupied(x, y)) {
+                        freeCells.push({ x, y });
+                    }
+                }
+            }
+            if (freeCells.length === 0) return { x: 0, y: 0 };
+            return freeCells[Math.floor(Math.random() * freeCells.length)];
+        }
+
+        function spawnNormalFood() {
+            state.normalFood = getRandomFreeCell();
+        }
+
+        function maybeSpawnSpecialFood() {
+            if (state.specialFood) return;
+            // Roll chance whenever normal food is eaten (or every few eaten apples)
+            const rand = Math.random();
+            if (rand > 0.55) return; // 45% chance to trigger a special item
+
+            const pos = getRandomFreeCell();
+            const rollType = Math.random();
+            let type = 'STAR';
+            let duration = 7500; // 7.5 seconds on grid
+
+            if (rollType < 0.42) {
+                type = 'STAR'; // Golden Star: +30 pts, 2x multiplier for 8s
+                duration = 7500;
+            } else if (rollType < 0.75) {
+                type = 'SPEED'; // Speed Potion: +15 pts, temporary speed boost
+                duration = 8500;
+            } else {
+                type = 'SHRINK'; // Shrink Berry: +20 pts, shortens snake
+                duration = 9000;
+            }
+
+            state.specialFood = {
+                x: pos.x,
+                y: pos.y,
+                type,
+                spawnTime: performance.now(),
+                duration
+            };
+        }
+
+        function spawnParticles(gridX, gridY, colorHex, count = 22) {
+            const centerX = (gridX + 0.5) * CELL_SIZE;
+            const centerY = (gridY + 0.5) * CELL_SIZE;
+            for (let i = 0; i < count; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 1.2 + Math.random() * 4.5;
+                state.particles.push({
+                    x: centerX,
+                    y: centerY,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    radius: 2 + Math.random() * 3.5,
+                    color: colorHex,
+                    alpha: 1,
+                    decay: 0.02 + Math.random() * 0.025
+                });
+            }
+        }
+
+        function getCurrentStepInterval() {
+            const base = DIFFICULTY_SPEEDS[state.difficulty].baseInterval;
+            // Slightly faster as snake grows
+            const speedLevelBonus = Math.min(35, Math.floor((state.snake.length - 3) / 3) * 4);
+            let interval = Math.max(48, base - speedLevelBonus);
+
+            if (state.speedBoostActive) {
+                interval = Math.max(40, Math.floor(interval * 0.68));
+            }
+            return interval;
+        }
+
+        function stepSnake(now) {
+            // Process next queued direction
+            if (state.inputQueue.length > 0) {
+                const nextDir = state.inputQueue.shift();
+                if (nextDir.x !== -state.direction.x || nextDir.y !== -state.direction.y) {
+                    state.direction = nextDir;
+                }
+            }
+
+            let nextX = state.snake[0].x + state.direction.x;
+            let nextY = state.snake[0].y + state.direction.y;
+
+            // Boundary Check (Portal vs Classic Wall)
+            if (state.portalMode) {
+                if (nextX < 0) nextX = GRID_SIZE - 1;
+                else if (nextX >= GRID_SIZE) nextX = 0;
+                if (nextY < 0) nextY = GRID_SIZE - 1;
+                else if (nextY >= GRID_SIZE) nextY = 0;
+            } else {
+                if (nextX < 0 || nextX >= GRID_SIZE || nextY < 0 || nextY >= GRID_SIZE) {
+                    triggerGameOver('撞擊高壓電網邊界');
+                    return;
+                }
+            }
+
+            // Obstacle Collision Check
+            if (state.obstacles.some(obs => obs.x === nextX && obs.y === nextY)) {
+                triggerGameOver('撞擊賽博能量障礙物');
+                return;
+            }
+
+            // Self Collision Check (ignore tail tip if not growing)
+            const willEatNormal = (nextX === state.normalFood.x && nextY === state.normalFood.y);
+            const bodyToCheck = willEatNormal ? state.snake : state.snake.slice(0, -1);
+            if (bodyToCheck.some(seg => seg.x === nextX && seg.y === nextY)) {
+                triggerGameOver('蛇身自我纏繞短路');
+                return;
+            }
+
+            // Move Head Forward
+            const newHead = { x: nextX, y: nextY };
+            state.snake.unshift(newHead);
+
+            // Check Normal Apple
+            if (willEatNormal) {
+                const pts = 10 * state.scoreMultiplier;
+                state.score += pts;
+                state.foodEatenCount++;
+                sound.playEatNormal();
+                spawnParticles(nextX, nextY, '#f43f5e', 24);
+                spawnNormalFood();
+                maybeSpawnSpecialFood();
+
+                if (state.foodEatenCount % 5 === 0) {
+                    sound.playLevelUp();
+                }
+            } else {
+                state.snake.pop();
+            }
+
+            // Check Special Food
+            if (state.specialFood && nextX === state.specialFood.x && nextY === state.specialFood.y) {
+                const sf = state.specialFood;
+                state.foodEatenCount++;
+                sound.playEatBonus();
+
+                if (sf.type === 'STAR') {
+                    state.score += 30 * state.scoreMultiplier;
+                    state.scoreMultiplier = 2;
+                    state.multiplierEndTime = now + 8000;
+                    spawnParticles(nextX, nextY, '#f59e0b', 34);
+                    showToast('🌟 獲得黃金星核！分數 +30 且啟動 8秒 2X 倍分！', 'ph-star text-amber-400');
+                } else if (sf.type === 'SPEED') {
+                    state.score += 15 * state.scoreMultiplier;
+                    state.speedBoostActive = true;
+                    state.speedBoostEndTime = now + 5000;
+                    spawnParticles(nextX, nextY, '#06b6d4', 30);
+                    showToast('⚡ 極速藥水啟動！獲得短暫氮氣加速！', 'ph-lightning text-cyan-400');
+                } else if (sf.type === 'SHRINK') {
+                    state.score += 20 * state.scoreMultiplier;
+                    // Shorten snake safely down to minimum 3 segments
+                    if (state.snake.length > 4) {
+                        state.snake.pop();
+                        state.snake.pop();
+                    } else if (state.snake.length > 3) {
+                        state.snake.pop();
+                    }
+                    spawnParticles(nextX, nextY, '#a855f7', 30);
+                    showToast('🍇 縮骨紫莓生效！成功精簡蛇身長度！', 'ph-arrows-in-line-horizontal text-purple-400');
+                }
+
+                state.specialFood = null;
+            }
+
+            // Update High Score
+            if (state.score > state.highScore) {
+                state.highScore = state.score;
+                localStorage.setItem('cyber_snake_highscore', String(state.highScore));
+            }
+
+            updateHUD();
+        }
+
+        function updateHUD() {
+            scoreDisplay.textContent = state.score;
+            highScoreDisplay.textContent = state.highScore;
+            const speedLv = Math.max(1, Math.floor((state.snake.length - 3) / 3) + 1);
+            speedLevelDisplay.textContent = `LV.${speedLv}`;
+            lengthDisplay.textContent = `長度: ${state.snake.length}`;
+            modeStatusText.textContent = state.portalMode ? '穿牆傳送模式' : '經典撞牆模式';
+            modeStatusText.className = state.portalMode
+                ? 'text-sm font-bold text-cyan-300 mt-1.5 truncate'
+                : 'text-sm font-bold text-purple-300 mt-1.5 truncate';
+            activeMapBadge.textContent = `地圖：${state.currentMapName}`;
+        }
+
+        function updateTimersAndBuffs(now) {
+            // 2x Multiplier Countdown
+            if (state.scoreMultiplier > 1) {
+                const remain = Math.max(0, (state.multiplierEndTime - now) / 1000);
+                if (remain <= 0) {
+                    state.scoreMultiplier = 1;
+                    multiplierBadge.classList.add('hidden');
+                } else {
+                    multiplierBadge.classList.remove('hidden');
+                    multiplierTimer.textContent = remain.toFixed(1);
+                }
+            } else {
+                multiplierBadge.classList.add('hidden');
+            }
+
+            // Speed Boost Countdown
+            if (state.speedBoostActive) {
+                const remain = Math.max(0, (state.speedBoostEndTime - now) / 1000);
+                if (remain <= 0) {
+                    state.speedBoostActive = false;
+                    speedBoostBarWrapper.classList.add('hidden');
+                } else {
+                    speedBoostBarWrapper.classList.remove('hidden');
+                    speedBoostTimer.textContent = `${remain.toFixed(1)}s`;
+                }
+            } else {
+                speedBoostBarWrapper.classList.add('hidden');
+            }
+
+            // Special Food Expiration Countdown Bar
+            if (state.specialFood) {
+                const elapsed = now - state.specialFood.spawnTime;
+                const ratio = 1 - elapsed / state.specialFood.duration;
+                if (ratio <= 0) {
+                    state.specialFood = null;
+                    starSpawnBarWrapper.classList.add('hidden');
+                } else {
+                    starSpawnBarWrapper.classList.remove('hidden');
+                    starCountdownBar.style.width = `${Math.max(0, ratio * 100)}%`;
+                }
+            } else {
+                starSpawnBarWrapper.classList.add('hidden');
+            }
+        }
+
+        function triggerGameOver(reason) {
+            state.status = 'GAMEOVER';
+            state.elapsedSeconds = Math.max(1, Math.round((performance.now() - state.startTime) / 1000));
+            sound.playGameOver();
+
+            // Crash explosion particles at snake head
+            const head = state.snake[0];
+            spawnParticles(head.x, head.y, '#10b981', 40);
+            spawnParticles(head.x, head.y, '#f43f5e', 25);
+
+            // Show Game Over Overlay
+            canvasOverlay.classList.remove('hidden', 'opacity-0', 'pointer-events-none');
+            overlayIcon.className = 'ph-fill ph-skull text-4xl text-rose-400';
+            overlayTitle.textContent = 'SYSTEM CRASH // 任務終止';
+            overlayTitle.className = 'font-cyber text-2xl sm:text-3xl font-black text-rose-400 tracking-wider mb-1';
+            overlaySubtitle.textContent = `終止原因：${reason}`;
+
+            gameOverStatsBox.classList.remove('hidden');
+            finalScoreStat.textContent = state.score;
+            finalTimeStat.textContent = `${state.elapsedSeconds}s`;
+            finalFoodStat.textContent = state.foodEatenCount;
+
+            aiReviewBox.classList.remove('hidden');
+            aiReviewText.textContent = generateLocalTacticalReview(reason);
+
+            mainActionBtnText.textContent = '再次挑戰 RETRY';
+
+            // Automatically trigger AI review if user has configured an API Key
+            const savedKey = localStorage.getItem('cyber_snake_gemini_key');
+            if (savedKey && savedKey.trim().length > 10) {
+                fetchGeminiPostGameReview(reason);
+            }
+        }
+
+        /**************************************************************
+         * 5. RENDERING ENGINE (HTML5 CANVAS NEON VISUALS)
+         **************************************************************/
+        function drawCanvas(now) {
+            state.pulseTick += 0.08;
+            ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+
+            // 1. Subtle Cyber Grid Background
+            ctx.strokeStyle = state.portalMode ? 'rgba(6, 182, 212, 0.08)' : 'rgba(16, 185, 129, 0.07)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= GRID_SIZE; i++) {
+                const pos = i * CELL_SIZE;
+                ctx.beginPath();
+                ctx.moveTo(pos, 0);
+                ctx.lineTo(pos, CANVAS_SIZE);
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(0, pos);
+                ctx.lineTo(CANVAS_SIZE, pos);
+                ctx.stroke();
+            }
+
+            // Portal Mode Dashed Glowing Border Indicator
+            if (state.portalMode) {
+                ctx.save();
+                ctx.strokeStyle = 'rgba(6, 182, 212, 0.55)';
+                ctx.lineWidth = 4;
+                ctx.setLineDash([10, 8]);
+                ctx.strokeRect(2, 2, CANVAS_SIZE - 4, CANVAS_SIZE - 4);
+                ctx.restore();
+            }
+
+            // 2. Render Obstacles
+            state.obstacles.forEach(obs => {
+                const x = obs.x * CELL_SIZE;
+                const y = obs.y * CELL_SIZE;
+                ctx.save();
+                ctx.shadowColor = '#64748b';
+                ctx.shadowBlur = 8;
+                ctx.fillStyle = '#1e293b';
+                ctx.strokeStyle = '#38bdf8';
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.roundRect(x + 2, y + 2, CELL_SIZE - 4, CELL_SIZE - 4, 5);
+                ctx.fill();
+                ctx.stroke();
+
+                // Inner tech cross
+                ctx.strokeStyle = 'rgba(56, 189, 248, 0.35)';
+                ctx.beginPath();
+                ctx.moveTo(x + 6, y + 6);
+                ctx.lineTo(x + CELL_SIZE - 6, y + CELL_SIZE - 6);
+                ctx.stroke();
+                ctx.restore();
+            });
+
+            // 3. Render Normal Red Neon Apple
+            if (state.normalFood) {
+                const fx = (state.normalFood.x + 0.5) * CELL_SIZE;
+                const fy = (state.normalFood.y + 0.5) * CELL_SIZE;
+                const pulseRadius = (CELL_SIZE * 0.36) + Math.sin(state.pulseTick) * 1.8;
+
+                ctx.save();
+                ctx.shadowColor = '#f43f5e';
+                ctx.shadowBlur = 18;
+                ctx.fillStyle = '#f43f5e';
+                ctx.beginPath();
+                ctx.arc(fx, fy, pulseRadius, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#ffe4e6';
+                ctx.beginPath();
+                ctx.arc(fx - 2.5, fy - 2.5, pulseRadius * 0.35, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+
+            // 4. Render Special Food (Golden Star, Speed Potion, Shrink Berry)
+            if (state.specialFood) {
+                const sx = (state.specialFood.x + 0.5) * CELL_SIZE;
+                const sy = (state.specialFood.y + 0.5) * CELL_SIZE;
+                const pulse = (CELL_SIZE * 0.42) + Math.cos(state.pulseTick * 1.8) * 2.5;
+
+                ctx.save();
+                if (state.specialFood.type === 'STAR') {
+                    ctx.shadowColor = '#f59e0b';
+                    ctx.shadowBlur = 22;
+                    ctx.fillStyle = '#fbbf24';
+                    drawStarShape(ctx, sx, sy, 5, pulse, pulse * 0.48);
+                } else if (state.specialFood.type === 'SPEED') {
+                    ctx.shadowColor = '#06b6d4';
+                    ctx.shadowBlur = 22;
+                    ctx.fillStyle = '#22d3ee';
+                    ctx.beginPath();
+                    ctx.moveTo(sx, sy - pulse);
+                    ctx.lineTo(sx + pulse, sy);
+                    ctx.lineTo(sx, sy + pulse);
+                    ctx.lineTo(sx - pulse, sy);
+                    ctx.closePath();
+                    ctx.fill();
+                } else if (state.specialFood.type === 'SHRINK') {
+                    ctx.shadowColor = '#a855f7';
+                    ctx.shadowBlur = 22;
+                    ctx.fillStyle = '#c084fc';
+                    ctx.beginPath();
+                    ctx.arc(sx, sy, pulse * 0.9, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                }
+                ctx.restore();
+            }
+
+            // 5. Render Emerald Neon Snake
+            state.snake.forEach((seg, index) => {
+                const x = seg.x * CELL_SIZE;
+                const y = seg.y * CELL_SIZE;
+                const isHead = index === 0;
+
+                ctx.save();
+                if (isHead) {
+                    ctx.shadowColor = state.speedBoostActive ? '#06b6d4' : '#10b981';
+                    ctx.shadowBlur = 20;
+                    ctx.fillStyle = state.speedBoostActive ? '#22d3ee' : '#34d399';
+                } else {
+                    const ratio = 1 - (index / Math.max(10, state.snake.length)) * 0.55;
+                    ctx.shadowColor = '#10b981';
+                    ctx.shadowBlur = 10;
+                    ctx.fillStyle = state.scoreMultiplier > 1
+                        ? `rgba(251, 191, 36, ${ratio})`
+                        : `rgba(16, 185, 129, ${ratio})`;
+                }
+
+                const pad = isHead ? 1.5 : 2.5;
+                ctx.beginPath();
+                ctx.roundRect(x + pad, y + pad, CELL_SIZE - pad * 2, CELL_SIZE - pad * 2, isHead ? 7 : 5);
+                ctx.fill();
+
+                // Draw glowing cyber eyes on Head
+                if (isHead) {
+                    ctx.fillStyle = '#020617';
+                    const eyeOffset = 5;
+                    const cx = x + CELL_SIZE / 2;
+                    const cy = y + CELL_SIZE / 2;
+                    let e1x = cx, e1y = cy, e2x = cx, e2y = cy;
+
+                    if (state.direction.x === 1) {
+                        e1x = cx + 4; e1y = cy - eyeOffset;
+                        e2x = cx + 4; e2y = cy + eyeOffset;
+                    } else if (state.direction.x === -1) {
+                        e1x = cx - 4; e1y = cy - eyeOffset;
+                        e2x = cx - 4; e2y = cy + eyeOffset;
+                    } else if (state.direction.y === -1) {
+                        e1x = cx - eyeOffset; e1y = cy - 4;
+                        e2x = cx + eyeOffset; e2y = cy - 4;
+                    } else {
+                        e1x = cx - eyeOffset; e1y = cy + 4;
+                        e2x = cx + eyeOffset; e2y = cy + 4;
+                    }
+
+                    ctx.beginPath();
+                    ctx.arc(e1x, e1y, 2.3, 0, Math.PI * 2);
+                    ctx.arc(e2x, e2y, 2.3, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                ctx.restore();
+            });
+
+            // 6. Update & Render Neon Burst Particles
+            for (let i = state.particles.length - 1; i >= 0; i--) {
+                const p = state.particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vx *= 0.96;
+                p.vy *= 0.96;
+                p.alpha -= p.decay;
+
+                if (p.alpha <= 0) {
+                    state.particles.splice(i, 1);
+                    continue;
+                }
+
+                ctx.save();
+                ctx.globalAlpha = p.alpha;
+                ctx.shadowColor = p.color;
+                ctx.shadowBlur = 12;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        function drawStarShape(ctx, cx, cy, spikes, outerRadius, innerRadius) {
+            let rot = Math.PI / 2 * 3;
+            let x = cx;
+            let y = cy;
+            const step = Math.PI / spikes;
+
+            ctx.beginPath();
+            ctx.moveTo(cx, cy - outerRadius);
+            for (let i = 0; i < spikes; i++) {
+                x = cx + Math.cos(rot) * outerRadius;
+                y = cy + Math.sin(rot) * outerRadius;
+                ctx.lineTo(x, y);
+                rot += step;
+
+                x = cx + Math.cos(rot) * innerRadius;
+                y = cy + Math.sin(rot) * innerRadius;
+                ctx.lineTo(x, y);
+                rot += step;
+            }
+            ctx.lineTo(cx, cy - outerRadius);
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        /**************************************************************
+         * 6. MAIN GAME LOOP
+         **************************************************************/
+        function gameLoop(now) {
+            if (state.status === 'RUNNING') {
+                updateTimersAndBuffs(now);
+                const interval = getCurrentStepInterval();
+                if (now - state.lastMoveTimestamp >= interval) {
+                    state.lastMoveTimestamp = now;
+                    stepSnake(now);
+                }
+            }
+            drawCanvas(now);
+            requestAnimationFrame(gameLoop);
+        }
+
+        /**************************************************************
+         * 7. INPUT HANDLING (KEYBOARD, VIRTUAL D-PAD & SWIPE)
+         **************************************************************/
+        function queueDirection(newDir) {
+            const lastScheduled = state.inputQueue.length > 0
+                ? state.inputQueue[state.inputQueue.length - 1]
+                : state.direction;
+
+            // Prevent 180-degree self reversal
+            if (newDir.x === -lastScheduled.x && newDir.y === -lastScheduled.y) return;
+            if (newDir.x === lastScheduled.x && newDir.y === lastScheduled.y) return;
+
+            if (state.inputQueue.length < 2) {
+                state.inputQueue.push(newDir);
+            }
+        }
+
+        function startOrResumeGame() {
+            sound.init();
+            if (state.status === 'IDLE' || state.status === 'GAMEOVER') {
+                initGameSession();
+                state.status = 'RUNNING';
+                state.lastMoveTimestamp = performance.now();
+                canvasOverlay.classList.add('opacity-0', 'pointer-events-none');
+            } else if (state.status === 'PAUSED') {
+                state.status = 'RUNNING';
+                state.lastMoveTimestamp = performance.now();
+                canvasOverlay.classList.add('opacity-0', 'pointer-events-none');
+            }
+        }
+
+        function togglePauseGame() {
+            if (state.status === 'RUNNING') {
+                state.status = 'PAUSED';
+                canvasOverlay.classList.remove('hidden', 'opacity-0', 'pointer-events-none');
+                overlayIcon.className = 'ph-fill ph-pause text-4xl text-cyan-400';
+                overlayTitle.textContent = 'SYSTEM PAUSED // 戰術暫停';
+                overlayTitle.className = 'font-cyber text-2xl sm:text-3xl font-black text-cyan-400 tracking-wider mb-2';
+                overlaySubtitle.textContent = '隨時準備好後點擊繼續或按下空白鍵重返賽場。';
+                gameOverStatsBox.classList.add('hidden');
+                aiReviewBox.classList.add('hidden');
+                mainActionBtnText.textContent = '繼續作戰 RESUME';
+            } else if (state.status === 'PAUSED') {
+                startOrResumeGame();
+            }
+        }
+
+        window.addEventListener('keydown', (e) => {
+            // Ignore shortcuts if typing inside an input field
+            if (['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)) return;
+
+            if (e.code === 'Space') {
+                e.preventDefault();
+                if (state.status === 'IDLE' || state.status === 'GAMEOVER') {
+                    startOrResumeGame();
+                } else {
+                    togglePauseGame();
+                }
+                return;
+            }
+
+            const keyMap = {
+                ArrowUp: { x: 0, y: -1 }, KeyW: { x: 0, y: -1 },
+                ArrowDown: { x: 0, y: 1 }, KeyS: { x: 0, y: 1 },
+                ArrowLeft: { x: -1, y: 0 }, KeyA: { x: -1, y: 0 },
+                ArrowRight: { x: 1, y: 0 }, KeyD: { x: 1, y: 0 }
+            };
+
+            if (keyMap[e.code]) {
+                e.preventDefault();
+                if (state.status === 'RUNNING') {
+                    queueDirection(keyMap[e.code]);
+                }
+            }
+        });
+
+        // Virtual D-Pad Buttons
+        document.querySelectorAll('.dpad-btn').forEach(btn => {
+            const handleDir = (e) => {
+                e.preventDefault();
+                if (state.status !== 'RUNNING') {
+                    startOrResumeGame();
+                }
+                const dirStr = btn.dataset.dir;
+                const map = {
+                    UP: { x: 0, y: -1 },
+                    DOWN: { x: 0, y: 1 },
+                    LEFT: { x: -1, y: 0 },
+                    RIGHT: { x: 1, y: 0 }
+                };
+                if (map[dirStr]) queueDirection(map[dirStr]);
+            };
+            btn.addEventListener('touchstart', handleDir, { passive: false });
+            btn.addEventListener('click', handleDir);
+        });
+
+        // Canvas Touch Swipe Support
+        let touchStartX = 0;
+        let touchStartY = 0;
+        canvas.addEventListener('touchstart', (e) => {
+            if (e.touches.length > 0) {
+                touchStartX = e.touches[0].clientX;
+                touchStartY = e.touches[0].clientY;
+            }
+        }, { passive: true });
+
+        canvas.addEventListener('touchend', (e) => {
+            if (e.changedTouches.length === 0) return;
+            const dx = e.changedTouches[0].clientX - touchStartX;
+            const dy = e.changedTouches[0].clientY - touchStartY;
+            if (Math.abs(dx) < 20 && Math.abs(dy) < 20) return;
+
+            if (Math.abs(dx) > Math.abs(dy)) {
+                queueDirection(dx > 0 ? { x: 1, y: 0 } : { x: -1, y: 0 });
+            } else {
+                queueDirection(dy > 0 ? { x: 0, y: 1 } : { x: 0, y: -1 });
+            }
+        }, { passive: true });
+
+        /**************************************************************
+         * 8. UI CONTROLS & SETTINGS EVENT LISTENERS
+         **************************************************************/
+        mainActionBtn.addEventListener('click', startOrResumeGame);
+        document.getElementById('pauseBtn').addEventListener('click', togglePauseGame);
+        document.getElementById('restartBtn').addEventListener('click', () => {
+            initGameSession();
+            state.status = 'RUNNING';
+            state.lastMoveTimestamp = performance.now();
+            canvasOverlay.classList.add('opacity-0', 'pointer-events-none');
+            showToast('已重新初始化戰場！');
+        });
+
+        // Sound Toggle
+        document.getElementById('soundToggleBtn').addEventListener('click', () => {
+            const isMuted = sound.toggleMute();
+            const icon = document.getElementById('soundIcon');
+            icon.className = isMuted ? 'ph-fill ph-speaker-slash text-lg text-rose-400' : 'ph-fill ph-speaker-high text-lg text-emerald-400';
+            showToast(isMuted ? '音效已靜音 (Muted)' : '合成器音效已開啟 (Unmuted)');
+        });
+
+        // Difficulty Selector
+        document.querySelectorAll('.diff-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                state.difficulty = btn.dataset.diff;
+                document.querySelectorAll('.diff-btn').forEach(b => {
+                    b.className = 'diff-btn py-2 px-2 rounded-xl text-xs font-bold border border-slate-700 bg-slate-800/60 text-slate-300 hover:border-emerald-500/50 transition-all';
+                });
+                btn.className = 'diff-btn py-2 px-2 rounded-xl text-xs font-bold border border-emerald-500 bg-emerald-500/20 text-emerald-300 shadow-[0_0_10px_rgba(16,185,129,0.3)] transition-all';
+                showToast(`難度已切換為：${DIFFICULTY_SPEEDS[state.difficulty].label}`);
+            });
+        });
+
+        // Portal Mode Toggle
+        const portalToggle = document.getElementById('portalToggle');
+        portalToggle.addEventListener('change', () => {
+            state.portalMode = portalToggle.checked;
+            updateHUD();
+            showToast(state.portalMode ? '已開啟【穿牆傳送模式】' : '已切換為【經典撞牆模式】');
+        });
+
+        // Preset Obstacle Map Selector
+        document.querySelectorAll('.map-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const mapKey = btn.dataset.map;
+                const mapConfig = PRESET_MAPS[mapKey];
+                if (!mapConfig) return;
+
+                state.currentMapKey = mapKey;
+                state.currentMapName = mapConfig.name;
+                state.obstacles = mapConfig.obstacles.map(o => ({ ...o }));
+
+                document.querySelectorAll('.map-btn').forEach(b => {
+                    b.className = 'map-btn py-2 px-2 rounded-xl text-xs font-medium border border-slate-700 bg-slate-800/60 text-slate-300 hover:border-cyan-500/40 transition-all';
+                });
+                btn.className = 'map-btn py-2 px-2 rounded-xl text-xs font-medium border border-cyan-500 bg-cyan-500/20 text-cyan-300 transition-all';
+
+                initGameSession();
+                showToast(`已載入地形：${mapConfig.name}`);
+            });
+        });
+
+        /**************************************************************
+         * 9. GEMINI AI COACH & DYNAMIC LEVEL GENERATOR
+         **************************************************************/
+        const aiModal = document.getElementById('aiModal');
+        const geminiApiKeyInput = document.getElementById('geminiApiKeyInput');
+        const keySavedBadge = document.getElementById('keySavedBadge');
+        const aiStatusDot = document.getElementById('aiStatusDot');
+        const aiMapThemeInput = document.getElementById('aiMapThemeInput');
+        const aiMapStatusMsg = document.getElementById('aiMapStatusMsg');
+
+        function syncApiKeyUI() {
+            const saved = localStorage.getItem('cyber_snake_gemini_key') || '';
+            geminiApiKeyInput.value = saved;
+            if (saved.trim().length > 10) {
+                keySavedBadge.classList.remove('hidden');
+                aiStatusDot.className = 'w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_#10b981]';
+                aiStatusDot.title = '已設定 Gemini API Key';
+            } else {
+                keySavedBadge.classList.add('hidden');
+                aiStatusDot.className = 'w-2 h-2 rounded-full bg-slate-500';
+                aiStatusDot.title = '尚未設定 API Key';
+            }
+        }
+
+        document.getElementById('openAiModalBtn').addEventListener('click', () => {
+            syncApiKeyUI();
+            aiModal.classList.remove('hidden');
+            aiModal.classList.add('flex');
+        });
+
+        const closeAiModal = () => {
+            aiModal.classList.add('hidden');
+            aiModal.classList.remove('flex');
+        };
+        document.getElementById('closeAiModalBtn').addEventListener('click', closeAiModal);
+        document.getElementById('doneAiModalBtn').addEventListener('click', closeAiModal);
+
+        document.getElementById('saveApiKeyBtn').addEventListener('click', () => {
+            const val = geminiApiKeyInput.value.trim();
+            if (!val) {
+                showToast('請輸入有效的 Gemini API Key', 'ph-warning text-amber-400');
+                return;
+            }
+            localStorage.setItem('cyber_snake_gemini_key', val);
+            syncApiKeyUI();
+            showToast('Gemini API Key 已安全儲存於本機瀏覽器！');
+        });
+
+        document.getElementById('clearApiKeyBtn').addEventListener('click', () => {
+            localStorage.removeItem('cyber_snake_gemini_key');
+            geminiApiKeyInput.value = '';
+            syncApiKeyUI();
+            showToast('已清除本機 API Key');
+        });
+
+        document.querySelectorAll('.theme-chip').forEach(chip => {
+            chip.addEventListener('click', () => {
+                aiMapThemeInput.value = chip.textContent.trim();
+            });
+        });
+
+        // Helper to call Gemini API with primary model `gemini-3.8-flash` and fallback `gemini-3.5-flash`
+        async function callGeminiWithFallback(promptText, expectJson = false) {
+            const apiKey = (localStorage.getItem('cyber_snake_gemini_key') || '').trim();
+            if (!apiKey) {
+                throw new Error('NO_API_KEY');
+            }
+
+            const models = ['gemini-3.8-flash', 'gemini-3.5-flash', 'gemini-2.5-flash'];
+            let lastErr = null;
+
+            for (const modelName of models) {
+                try {
+                    const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${encodeURIComponent(apiKey)}`;
+                    const bodyPayload = {
+                        contents: [{ parts: [{ text: promptText }] }],
+                        generationConfig: expectJson ? { responseMimeType: "application/json" } : {}
+                    };
+
+                    const res = await fetch(url, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(bodyPayload)
+                    });
+
+                    if (!res.ok) {
+                        throw new Error(`HTTP ${res.status}`);
+                    }
+
+                    const data = await res.json();
+                    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+                    if (text) return { text, modelUsed: modelName };
+                } catch (err) {
+                    lastErr = err;
+                }
+            }
+            throw lastErr || new Error('GEMINI_REQUEST_FAILED');
+        }
+
+        // Local Algorithmic Fallback Map Generator (if no API key or offline)
+        function generateOfflineThemeObstacles(theme) {
+            const obs = [];
+            if (theme.includes('雙子')) {
+                for (let dx = 0; dx < 3; dx++) {
+                    for (let dy = 0; dy < 3; dy++) {
+                        obs.push({ x: 6 + dx, y: 6 + dy });
+                        obs.push({ x: 15 + dx, y: 16 + dy });
+                    }
+                }
+            } else if (theme.includes('X') || theme.includes('封鎖')) {
+                for (let i = 4; i < 20; i++) {
+                    if (i >= 11 && i <= 15) continue; // Keep snake spawn zone safe
+                    obs.push({ x: i, y: i });
+                    obs.push({ x: 23 - i, y: i });
+                }
+            } else if (theme.includes('迷宮')) {
+                for (let x = 4; x <= 19; x++) {
+                    if (x !== 11 && x !== 12) {
+                        obs.push({ x, y: 5 });
+                        obs.push({ x, y: 19 });
+                    }
+                }
+                for (let y = 8; y <= 16; y++) {
+                    if (y !== 14) {
+                        obs.push({ x: 5, y });
+                        obs.push({ x: 18, y });
+                    }
+                }
+            } else {
+                // Procedural symmetric pattern based on theme string hash
+                let hash = 0;
+                for (let i = 0; i < theme.length; i++) hash = (hash * 31 + theme.charCodeAt(i)) % 997;
+                for (let i = 0; i < 10; i++) {
+                    const gx = 3 + ((hash + i * 5) % 8);
+                    const gy = 3 + ((hash + i * 7) % 18);
+                    if (gy !== 14) {
+                        obs.push({ x: gx, y: gy });
+                        obs.push({ x: 23 - gx, y: gy });
+                    }
+                }
+            }
+            return obs;
+        }
+
+        // Generate AI Custom Obstacle Map Handler
+        document.getElementById('generateAiMapBtn').addEventListener('click', async () => {
+            const theme = aiMapThemeInput.value.trim() || '迷宮陣';
+            const btnText = document.getElementById('generateAiMapBtnText');
+            btnText.textContent = '演算中...';
+            aiMapStatusMsg.classList.remove('hidden');
+            aiMapStatusMsg.textContent = `正在為主題「${theme}」計算 24x24 戰術障礙物座標...`;
+
+            try {
+                const prompt = `You are a game level designer for a 24x24 grid Snake game (coordinates x: 0..23, y: 0..23).
+Design a symmetric, fun obstacle map matching the theme "${theme}".
+CRITICAL RULE: Keep row y=14 (x from 6 to 15) completely free of obstacles so the snake can spawn safely, and do not create inescapable closed boxes. Place between 14 and 32 obstacle blocks.
+Return ONLY valid JSON in this exact format:
+{"mapName": "${theme}", "tacticalTip": "一句簡短繁體中文破關戰術提示", "obstacles": [{"x": 5, "y": 5}]}`;
+
+                const { text, modelUsed } = await callGeminiWithFallback(prompt, true);
+                const parsed = JSON.parse(text);
+                if (Array.isArray(parsed.obstacles)) {
+                    state.obstacles = parsed.obstacles.filter(o =>
+                        Number.isInteger(o.x) && Number.isInteger(o.y) &&
+                        o.x >= 1 && o.x < GRID_SIZE - 1 && o.y >= 1 && o.y < GRID_SIZE - 1 &&
+                        !(o.y === 14 && o.x >= 6 && o.x <= 15)
+                    );
+                    state.currentMapName = `AI:${parsed.mapName || theme}`;
+                    initGameSession();
+                    aiMapStatusMsg.innerHTML = `<span class="text-emerald-400 font-bold">✓ 生成成功 (${modelUsed})：</span>${parsed.tacticalTip || '善用穿牆或精準轉向突破封鎖！'}`;
+                    showToast(`AI 關卡「${theme}」已部署完成！`, 'ph-sparkle text-purple-400');
+                }
+            } catch (err) {
+                // Graceful fallback to local generator so user always gets their custom map
+                state.obstacles = generateOfflineThemeObstacles(theme);
+                state.currentMapName = `戰術:${theme}`;
+                initGameSession();
+                aiMapStatusMsg.innerHTML = `<span class="text-cyan-400 font-bold">✓ 已透過內建戰術演算器生成「${theme}」對稱陣列！</span>（若綁定 Gemini API Key 可啟用雲端深度創意生成）`;
+                showToast(`已生成「${theme}」主題關卡！`);
+            } finally {
+                btnText.textContent = '生成關卡';
+            }
+        });
+
+        // Local Post-Game Review Generator
+        function generateLocalTacticalReview(reason) {
+            if (state.score >= 250) {
+                return `【S級賽博傳奇】本局獲得 ${state.score} 分並存活 ${state.elapsedSeconds} 秒！您的反應神經宛如量子電腦，建議挑戰「極速挑戰」或生成的「X型封鎖」地形！`;
+            } else if (state.score >= 100) {
+                return `【A級霓虹獵手】斬獲 ${state.score} 分（吞噬 ${state.foodEatenCount} 顆能量），因「${reason}」惜敗。當蛇身變長時，可優先尋找紫色「縮骨紫莓」維持靈活度！`;
+            } else {
+                return `【戰術熱身完畢】本局得分 ${state.score} 分。建議先採用「穿牆傳送模式」熟悉轉向節奏，並在「黃金星核」出現時優先搶奪 2X 倍分！`;
+            }
+        }
+
+        // Gemini Post-Game AI Review
+        async function fetchGeminiPostGameReview(reason) {
+            aiReviewText.textContent = '🤖 AI 戰術教練正在連線 Gemini 分析您的本局走位數據...';
+            try {
+                const prompt = `你是一位幽默、熱血且專業的 Cyberpunk 電競貪食蛇 AI 戰術教練。
+玩家剛結束一局遊戲，數據如下：
+- 得分：${state.score} 分
+- 存活時間：${state.elapsedSeconds} 秒
+- 吃掉食物數量：${state.foodEatenCount} 個
+- 最終蛇身長度：${state.snake.length}
+- 難度與模式：${DIFFICULTY_SPEEDS[state.difficulty].label} / ${state.portalMode ? '穿牆模式' : '經典撞牆模式'}
+- 地圖：${state.currentMapName}
+- 失敗原因：${reason}
+請用繁體中文給出一段 60~90 字以內、風趣鼓勵且具體的賽後戰術講評。`;
+
+                const { text } = await callGeminiWithFallback(prompt, false);
+                aiReviewText.textContent = text.trim();
+            } catch (e) {
+                aiReviewText.textContent = generateLocalTacticalReview(reason);
+            }
+        }
+
+        requestAiReviewBtn.addEventListener('click', () => {
+            const savedKey = localStorage.getItem('cyber_snake_gemini_key');
+            if (!savedKey || savedKey.trim().length < 10) {
+                showToast('請先點擊上方「AI 戰術教練」設定 Gemini API Key，即可啟動雲端深度講評！', 'ph-info text-purple-400');
+                syncApiKeyUI();
+                aiModal.classList.remove('hidden');
+                aiModal.classList.add('flex');
+                return;
+            }
+            fetchGeminiPostGameReview('玩家手動請求深度戰術復盤');
+        });
+
+        /**************************************************************
+         * 10. BOOTSTRAP ON WINDOW LOAD
+         **************************************************************/
+        window.onload = function () {
+            syncApiKeyUI();
+            initGameSession();
+            requestAnimationFrame(gameLoop);
+        };
+    </script>
+</body>
+</html>
